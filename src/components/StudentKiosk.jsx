@@ -100,6 +100,11 @@ export default function StudentKiosk() {
   const [equipmentCategory, setEquipmentCategory] = useState('all');
   const [manualEquipCode, setManualEquipCode] = useState('');
 
+  // Kiosk Operating Mode ('borrow' | 'return')
+  const [kioskMode, setKioskMode] = useState('borrow');
+  const [scannedReturnLoan, setScannedReturnLoan] = useState(null);
+  const [manualReturnCode, setManualReturnCode] = useState('');
+
   // Active borrow step ('step_equipment' | 'step_student')
   const [currentStep, setCurrentStep] = useState('step_equipment');
 
@@ -234,6 +239,76 @@ export default function StudentKiosk() {
       showToast(`เลือกอุปกรณ์: ${item.name}`, 'success');
     } else {
       showToast(`ไม่พบอุปกรณ์รหัส: ${code}`, 'warning');
+    }
+  };
+
+  // 📥 Handle Return Scan at Teacher's Desk
+  const handleScanReturnEquipment = () => {
+    openScanner((scannedCode) => {
+      const clean = scannedCode.trim().toLowerCase();
+      const activeLoans = loans.filter(l => l.status === 'active' || l.status === 'overdue');
+      const matched = activeLoans.find(l => 
+        (l.id && l.id.toLowerCase() === clean) ||
+        (l.studentId && l.studentId.toLowerCase() === clean) ||
+        (l.borrowerStudentId && l.borrowerStudentId.toLowerCase() === clean) ||
+        l.items?.some(i => (i.code && i.code.toLowerCase() === clean) || (i.equipmentId && i.equipmentId.toLowerCase() === clean))
+      );
+
+      if (matched) {
+        setScannedReturnLoan(matched);
+        showToast(`พบรายการยืม: ${matched.borrowerName} (${matched.items?.[0]?.name})`, 'success');
+      } else {
+        showToast(`ไม่พบรายการค้างยืมสำหรับรหัส: ${scannedCode}`, 'warning');
+      }
+    }, 'สแกน Barcode / QR Code อุปกรณ์เพื่อส่งคืน');
+  };
+
+  // Handle Manual Return Code Submit
+  const handleManualReturnSubmit = (e) => {
+    if (e) e.preventDefault();
+    const clean = manualReturnCode.trim().toLowerCase();
+    if (!clean) {
+      showToast('กรุณาพิมพ์รหัสอุปกรณ์หรือรหัสนักเรียน', 'warning');
+      return;
+    }
+    const activeLoans = loans.filter(l => l.status === 'active' || l.status === 'overdue');
+    const matched = activeLoans.find(l => 
+      (l.id && l.id.toLowerCase() === clean) ||
+      (l.studentId && l.studentId.toLowerCase() === clean) ||
+      (l.borrowerStudentId && l.borrowerStudentId.toLowerCase() === clean) ||
+      l.items?.some(i => (i.code && i.code.toLowerCase() === clean) || (i.equipmentId && i.equipmentId.toLowerCase() === clean))
+    );
+
+    if (matched) {
+      setScannedReturnLoan(matched);
+      showToast(`พบรายการยืม: ${matched.borrowerName}`, 'success');
+    } else {
+      showToast(`ไม่พบรายการค้างยืมสำหรับรหัส: ${manualReturnCode}`, 'warning');
+    }
+  };
+
+  // Confirm Scanned Return at Teacher's Desk
+  const handleConfirmReturnScanSubmit = () => {
+    if (!scannedReturnLoan) return;
+    const item = scannedReturnLoan.items?.[0];
+    const success = processReturn(scannedReturnLoan.id, {
+      condition: 'สมบูรณ์ (Good)',
+      notes: 'สแกนคืนที่โต๊ะอาจารย์ (Teacher Desk Scan)',
+      receivedBy: 'จุดสแกนโต๊ะอาจารย์'
+    });
+
+    if (success) {
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+      setReturnSuccessData({
+        loan: scannedReturnLoan,
+        item: item
+      });
+      setScannedReturnLoan(null);
+      setManualReturnCode('');
     }
   };
 
@@ -833,6 +908,347 @@ export default function StudentKiosk() {
               <AlertTriangle size={18} color="#d97706" />
               <span>ส่งต่อ / แจ้งปัญหา ➔</span>
             </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* ============================================================ */}
+          {/* 🌟 TOP MODE SELECTOR: BORROW (ยืม) vs RETURN (คืนอุปกรณ์)      */}
+          {/* ============================================================ */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: '12px',
+        maxWidth: '560px',
+        margin: '0 auto',
+        width: '100%',
+        background: 'linear-gradient(135deg, #ffffff 0%, #f8faff 100%)',
+        padding: '6px',
+        borderRadius: '20px',
+        border: '1.5px solid rgba(221, 228, 239, 0.9)',
+        boxShadow: '0 6px 20px rgba(0, 0, 0, 0.04)'
+      }}>
+        <button
+          type="button"
+          onClick={() => {
+            setKioskMode('borrow');
+            setScannedReturnLoan(null);
+          }}
+          style={{
+            padding: '12px 18px',
+            borderRadius: '16px',
+            border: 'none',
+            background: kioskMode === 'borrow'
+              ? 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)'
+              : 'transparent',
+            color: kioskMode === 'borrow' ? '#ffffff' : '#475569',
+            fontWeight: 800,
+            fontSize: '0.98rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            transition: 'all 0.2s ease',
+            boxShadow: kioskMode === 'borrow' ? '0 4px 16px rgba(2, 132, 199, 0.35)' : 'none'
+          }}
+        >
+          <span style={{ fontSize: '18px' }}>⚽</span>
+          <span>ยืมอุปกรณ์กีฬา</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setKioskMode('return');
+            setScannedReturnLoan(null);
+          }}
+          style={{
+            padding: '12px 18px',
+            borderRadius: '16px',
+            border: 'none',
+            background: kioskMode === 'return'
+              ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+              : 'transparent',
+            color: kioskMode === 'return' ? '#ffffff' : '#475569',
+            fontWeight: 800,
+            fontSize: '0.98rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            transition: 'all 0.2s ease',
+            boxShadow: kioskMode === 'return' ? '0 4px 16px rgba(16, 185, 129, 0.35)' : 'none'
+          }}
+        >
+          <span style={{ fontSize: '18px' }}>📥</span>
+          <span>คืนอุปกรณ์กีฬา (สแกนที่โต๊ะ)</span>
+        </button>
+      </div>
+
+      {kioskMode === 'return' ? (
+        /* ============================================================ */
+        /* 📥 RETURN FLOW — Teacher's Desk Return Scan Arena            */
+        /* ============================================================ */
+        <div className="kiosk-desktop-split">
+          {/* LEFT COLUMN: Return Scan Arena */}
+          <div className="kiosk-left-column">
+            <div style={{
+              background: 'linear-gradient(145deg, #ffffff 0%, #f0fdf4 100%)',
+              borderRadius: '24px',
+              padding: '24px',
+              border: '1.5px solid rgba(16, 185, 129, 0.4)',
+              boxShadow: '0 8px 28px rgba(16, 185, 129, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.7) inset',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '18px',
+              height: '100%'
+            }}>
+              {/* Scan box */}
+              <div style={{
+                background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 50%, #e6fffa 100%)',
+                border: '1.5px solid rgba(16, 185, 129, 0.4)',
+                borderRadius: '20px',
+                padding: '20px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px',
+                boxShadow: '0 8px 28px rgba(16, 185, 129, 0.1)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '14px',
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    color: '#fff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '22px',
+                    boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
+                    flexShrink: 0
+                  }}>
+                    📥
+                  </div>
+                  <div>
+                    <h2 style={{ margin: 0, fontSize: '1.18rem', fontWeight: 900, color: '#065f46', lineHeight: 1.2 }}>
+                      จุดสแกนคืนอุปกรณ์โต๊ะอาจารย์
+                    </h2>
+                    <div style={{ fontSize: '0.8rem', color: '#059669', fontWeight: 700, marginTop: '2px' }}>
+                      นำอุปกรณ์หรือบาร์โค้ดมาสแกนเพื่อยืนยันการส่งคืน
+                    </div>
+                  </div>
+                </div>
+
+                {/* Return Scan Camera Button */}
+                <button
+                  type="button"
+                  onClick={handleScanReturnEquipment}
+                  style={{
+                    width: '100%',
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 60%, #047857 100%)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '16px',
+                    padding: '16px 20px',
+                    fontSize: '1.05rem',
+                    fontWeight: 900,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px',
+                    boxShadow: '0 8px 24px rgba(16, 185, 129, 0.4)'
+                  }}
+                >
+                  <Scan size={24} />
+                  <span>เปิดกล้องสแกนบาร์โค้ด / QR เพื่อส่งคืน</span>
+                </button>
+
+                {/* Manual Code Input */}
+                <form onSubmit={handleManualReturnSubmit} style={{ display: 'flex', gap: '8px' }}>
+                  <div style={{ position: 'relative', flex: 1 }}>
+                    <IdCard size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#059669' }} />
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="พิมพ์รหัสอุปกรณ์ หรือ รหัสนักเรียน..."
+                      value={manualReturnCode}
+                      onChange={(e) => setManualReturnCode(e.target.value)}
+                      style={{
+                        paddingLeft: '40px',
+                        fontSize: '0.92rem',
+                        fontWeight: 700,
+                        background: '#ffffff',
+                        border: '1.5px solid rgba(16, 185, 129, 0.5)',
+                        borderRadius: '14px',
+                        marginBottom: 0
+                      }}
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    style={{
+                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '14px',
+                      padding: '0 20px',
+                      fontWeight: 800,
+                      fontSize: '0.92rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <Search size={16} />
+                    <span>ค้นหา</span>
+                  </button>
+                </form>
+              </div>
+
+              {/* Scanned Loan Match Card */}
+              {scannedReturnLoan ? (
+                <div style={{
+                  background: '#ffffff',
+                  border: '2px solid #10b981',
+                  borderRadius: '20px',
+                  padding: '20px',
+                  boxShadow: '0 8px 24px rgba(16, 185, 129, 0.15)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '14px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#065f46', background: '#dcfce7', padding: '4px 12px', borderRadius: '999px' }}>
+                      ✓ พบรายการยืมที่ตรงกัน
+                    </span>
+                    <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                      รหัส: {scannedReturnLoan.id}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <div style={{ fontSize: '42px' }}>
+                      {scannedReturnLoan.items?.[0]?.image || '⚽'}
+                    </div>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>
+                        {scannedReturnLoan.items?.[0]?.name || 'อุปกรณ์กีฬา'}
+                      </h4>
+                      <div style={{ fontSize: '0.88rem', color: '#475569', marginTop: '2px' }}>
+                        ผู้ยืม: <strong>{scannedReturnLoan.borrowerName}</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleConfirmReturnScanSubmit}
+                    style={{
+                      width: '100%',
+                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '16px',
+                      padding: '16px 20px',
+                      fontSize: '1.05rem',
+                      fontWeight: 900,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      boxShadow: '0 8px 24px rgba(16, 185, 129, 0.4)'
+                    }}
+                  >
+                    <RotateCcw size={20} />
+                    <span>ยืนยันการรับคืนอุปกรณ์นี้ (บันทึกเข้าระบบ)</span>
+                  </button>
+                </div>
+              ) : (
+                <div style={{
+                  background: 'linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)',
+                  border: '1.5px solid rgba(16, 185, 129, 0.3)',
+                  borderRadius: '16px',
+                  padding: '16px 20px',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '12px',
+                  fontSize: '0.88rem',
+                  color: '#065f46',
+                  marginTop: 'auto'
+                }}>
+                  <span style={{ fontSize: '20px', flexShrink: 0 }}>ℹ️</span>
+                  <span>
+                    <strong>การตรวจรับคืนที่โต๊ะอาจารย์:</strong> ให้นำอุปกรณ์มากดเปิดกล้องสแกนบาร์โค้ด หรือยิงเครื่องสแกน เพื่อยืนยันว่าได้นำของมาคืนจริง
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN: Real-time Active Loans List */}
+          <div className="kiosk-right-column kiosk-desktop-only">
+            <div style={{
+              background: 'linear-gradient(145deg, #ffffff 0%, #f8faff 100%)',
+              borderRadius: '24px',
+              padding: '24px',
+              border: '1.5px solid rgba(221, 228, 239, 0.9)',
+              boxShadow: '0 8px 28px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(255, 255, 255, 0.7) inset',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px',
+              height: '100%'
+            }}>
+              <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#1e3a5f', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '20px' }}>📋</span>
+                <span>รายการที่กำลังยืมอยู่ ({loans.filter(l => l.status === 'active' || l.status === 'overdue').length} รายการ):</span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '420px', overflowY: 'auto' }}>
+                {loans.filter(l => l.status === 'active' || l.status === 'overdue').length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '40px 20px', color: '#94a3b8' }}>
+                    <div style={{ fontSize: '32px', marginBottom: '8px' }}>✓</div>
+                    <div style={{ fontWeight: 700 }}>ไม่มีรายการค้างยืมในขณะนี้</div>
+                    <div style={{ fontSize: '0.8rem', marginTop: '4px' }}>อุปกรณ์ทุกชิ้นอยู่ในคลังครบถ้วน</div>
+                  </div>
+                ) : (
+                  loans.filter(l => l.status === 'active' || l.status === 'overdue').map(l => (
+                    <div
+                      key={l.id}
+                      onClick={() => setScannedReturnLoan(l)}
+                      style={{
+                        background: '#ffffff',
+                        border: scannedReturnLoan?.id === l.id ? '2px solid #10b981' : '1px solid #e2e8f0',
+                        borderRadius: '14px',
+                        padding: '12px 14px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        cursor: 'pointer',
+                        boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontSize: '24px' }}>{l.items?.[0]?.image || '⚽'}</span>
+                        <div>
+                          <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#0f172a' }}>{l.borrowerName}</div>
+                          <div style={{ fontSize: '0.78rem', color: '#64748b' }}>{l.items?.[0]?.name}</div>
+                        </div>
+                      </div>
+                      <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#059669', background: '#dcfce7', padding: '3px 10px', borderRadius: '999px' }}>
+                        กดเพื่อเลือกคืน
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
         </div>
       ) : (
@@ -1728,6 +2144,8 @@ export default function StudentKiosk() {
 
         </div>
       )}
+    </>
+  )}
 
       {/* ========================================================================= */}
       {/* MODAL 1: "CANNOT RETURN / REPORT ISSUE / HANDOVER TO FRIEND" */}
