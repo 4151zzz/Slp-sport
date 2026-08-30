@@ -90,6 +90,17 @@ export function AppProvider({ children }) {
     return localStorage.getItem(STORAGE_KEYS.TEACHER_PIN) || DEFAULT_TEACHER_PIN;
   });
 
+  // Pending return IDs: loans where student has scanned to return but teacher hasn't confirmed yet
+  // Stored in localStorage so it survives Supabase sync overwrites
+  const [pendingReturnIds, setPendingReturnIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem('sportequip_pending_return_ids_v1');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
   // Sync activeTab to sessionStorage
   useEffect(() => {
     if (activeTab) {
@@ -145,34 +156,52 @@ export function AppProvider({ children }) {
       try {
         const { data: cloudLoans } = await supabaseApi.get('loans', 'order=borrow_date.desc&limit=100');
         if (isMounted && cloudLoans && Array.isArray(cloudLoans)) {
-          const formattedList = cloudLoans.map(cLoan => ({
-            id: cLoan.id,
-            studentId: cLoan.borrower_id || '',
-            borrowerStudentId: cLoan.borrower_id || '',
-            borrowerName: cLoan.borrower_name || 'นักเรียน',
-            studentName: (cLoan.borrower_name || '').split(' (')[0],
-            grade: cLoan.grade || 'ม.1',
-            room: cLoan.room || '1',
-            borrowerDepartment: cLoan.grade && cLoan.room ? `ชั้น ${cLoan.grade}/${cLoan.room}` : 'นักเรียน',
-            borrowerDept: cLoan.grade && cLoan.room ? `ชั้น ${cLoan.grade}/${cLoan.room}` : 'นักเรียน',
-            phone: cLoan.phone || '',
-            lineId: cLoan.line_id || '',
-            borrowerPhone: cLoan.phone || '',
-            borrowerLineId: cLoan.line_id || '',
-            borrowDate: cLoan.borrow_date || cLoan.created_at,
-            dueDate: cLoan.return_due || new Date().toISOString(),
-            returnDate: cLoan.return_date,
-            status: cLoan.status || 'active',
-            items: [
-              {
-                equipmentId: cLoan.item_id || 'SP-01',
-                code: cLoan.item_barcode || '',
-                name: cLoan.item_name || 'อุปกรณ์กีฬา',
-                image: cLoan.item_image || '⚽',
-                qty: 1
-              }
-            ]
-          }));
+          const formattedList = cloudLoans.map(cLoan => {
+            // Determine correct status: if this loan is locally marked as pending_return,
+            // KEEP that status even if Supabase hasn't updated yet (prevents sync overwrite)
+            const cloudStatus = cLoan.status || 'active';
+            const localPending = pendingReturnIds.has(cLoan.id);
+            const effectiveStatus = localPending && cloudStatus === 'active' ? 'pending_return' : cloudStatus;
+
+            // If teacher confirmed (status = 'returned'), remove from pendingReturnIds
+            if (cloudStatus === 'returned' && localPending) {
+              setPendingReturnIds(prev => {
+                const next = new Set(prev);
+                next.delete(cLoan.id);
+                localStorage.setItem('sportequip_pending_return_ids_v1', JSON.stringify([...next]));
+                return next;
+              });
+            }
+
+            return {
+              id: cLoan.id,
+              studentId: cLoan.borrower_id || '',
+              borrowerStudentId: cLoan.borrower_id || '',
+              borrowerName: cLoan.borrower_name || 'นักเรียน',
+              studentName: (cLoan.borrower_name || '').split(' (')[0],
+              grade: cLoan.grade || 'ม.1',
+              room: cLoan.room || '1',
+              borrowerDepartment: cLoan.grade && cLoan.room ? `ชั้น ${cLoan.grade}/${cLoan.room}` : 'นักเรียน',
+              borrowerDept: cLoan.grade && cLoan.room ? `ชั้น ${cLoan.grade}/${cLoan.room}` : 'นักเรียน',
+              phone: cLoan.phone || '',
+              lineId: cLoan.line_id || '',
+              borrowerPhone: cLoan.phone || '',
+              borrowerLineId: cLoan.line_id || '',
+              borrowDate: cLoan.borrow_date || cLoan.created_at,
+              dueDate: cLoan.return_due || new Date().toISOString(),
+              returnDate: cLoan.return_date,
+              status: effectiveStatus,
+              items: [
+                {
+                  equipmentId: cLoan.item_id || 'SP-01',
+                  code: cLoan.item_barcode || '',
+                  name: cLoan.item_name || 'อุปกรณ์กีฬา',
+                  image: cLoan.item_image || '⚽',
+                  qty: 1
+                }
+              ]
+            };
+          });
           setLoans(formattedList);
         }
       } catch (err) {
@@ -391,6 +420,14 @@ export function AppProvider({ children }) {
     const condition = returnDetails.condition || 'สมบูรณ์ (Good)';
     const notes = returnDetails.notes || '';
     const nowIso = new Date().toISOString();
+
+    // Remove from pendingReturnIds since teacher is confirming the return
+    setPendingReturnIds(prev => {
+      const next = new Set(prev);
+      next.delete(loanId);
+      localStorage.setItem('sportequip_pending_return_ids_v1', JSON.stringify([...next]));
+      return next;
+    });
 
     setLoans(prev => prev.map(l => {
       if (l.id === loanId) {
@@ -628,13 +665,22 @@ export function AppProvider({ children }) {
   };
 
   // Student scans equipment to request return -> changes status to 'pending_return'
+  // Also adds loanId to pendingReturnIds so sync loop never overwrites it back to 'active'
   const requestReturnByStudent = (loanId, notes = '') => {
     const targetLoan = loans.find(l => l.id === loanId);
     if (!targetLoan) return false;
 
     const nowIso = new Date().toISOString();
-    
-    // Update local state
+
+    // 1. Add to pendingReturnIds FIRST so sync loop protects it immediately
+    setPendingReturnIds(prev => {
+      const next = new Set(prev);
+      next.add(loanId);
+      localStorage.setItem('sportequip_pending_return_ids_v1', JSON.stringify([...next]));
+      return next;
+    });
+
+    // 2. Update local state
     setLoans(prev => prev.map(l => l.id === loanId ? {
       ...l,
       status: 'pending_return',
@@ -642,7 +688,7 @@ export function AppProvider({ children }) {
       returnNotes: notes || 'นักเรียนสแกนแจ้งส่งคืนที่โต๊ะอาจารย์'
     } : l));
 
-    // Save to Supabase Cloud
+    // 3. Save to Supabase Cloud (async, ok if slow)
     supabaseApi.patch(`loans?id=eq.${loanId}`, {
       status: 'pending_return',
       notes: notes || 'นักเรียนสแกนแจ้งส่งคืนที่โต๊ะอาจารย์'
