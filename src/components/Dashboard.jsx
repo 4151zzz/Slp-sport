@@ -32,6 +32,7 @@ export default function Dashboard() {
   const { 
     equipment, 
     loans, 
+    processReturn,
     setActiveTab, 
     openScanner, 
     setSelectedReminderLoan,
@@ -43,6 +44,7 @@ export default function Dashboard() {
   const availableItemsCount = equipment.reduce((sum, item) => sum + item.availableQty, 0);
   const borrowedItemsCount = totalItemsCount - availableItemsCount;
 
+  const pendingReturns = loans.filter(l => l.status === 'pending_return');
   const activeLoans = loans.filter(l => l.status === 'active' || l.status === 'overdue');
   const overdueLoans = loans.filter(l => l.status === 'overdue');
 
@@ -141,6 +143,115 @@ export default function Dashboard() {
           </button>
         </div>
       </div>
+
+      {/* 📥 Pending Return Verifications for Teacher */}
+      {pendingReturns.length > 0 && (
+        <div style={{
+          background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 50%, #ffffff 100%)',
+          border: '2px solid #f59e0b',
+          borderRadius: 'var(--radius-lg)',
+          padding: '20px 24px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '14px',
+          boxShadow: '0 8px 28px rgba(245, 158, 11, 0.2)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '42px',
+                height: '42px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '22px',
+                boxShadow: '0 4px 12px rgba(245, 158, 11, 0.35)'
+              }}>
+                📥
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#92400e' }}>
+                  มีนักเรียนแจ้งส่งคืนอุปกรณ์ ({pendingReturns.length} รายการ) • รอคุณครูตรวจสอบ
+                </h3>
+                <div style={{ fontSize: '0.82rem', color: '#b45309', marginTop: '2px' }}>
+                  ตรวจสอบสภาพอุปกรณ์ที่โต๊ะ แล้วกดยืนยันรับคืนเพื่อตัดสต็อกเข้าคลัง
+                </div>
+              </div>
+            </div>
+
+            <span style={{
+              background: '#fef3c7',
+              color: '#92400e',
+              border: '1px solid #fcd34d',
+              padding: '4px 12px',
+              borderRadius: '999px',
+              fontSize: '0.8rem',
+              fontWeight: 800
+            }}>
+              🟡 รอการตรวจสอบ
+            </span>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
+            {pendingReturns.map(l => (
+              <div
+                key={l.id}
+                style={{
+                  background: '#ffffff',
+                  border: '1.5px solid #fcd34d',
+                  borderRadius: '16px',
+                  padding: '16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.04)'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '32px' }}>{l.items?.[0]?.image || '⚽'}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.98rem', color: '#0f172a' }}>{l.borrowerName}</div>
+                    <div style={{ fontSize: '0.82rem', color: '#0284c7', fontWeight: 700 }}>{l.items?.[0]?.name}</div>
+                    <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px' }}>รหัส: {l.id}</div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    processReturn(l.id, {
+                      condition: 'สมบูรณ์ (Good)',
+                      notes: 'คุณครูตรวจสอบรับคืนผ่าน Dashboard',
+                      receivedBy: 'คุณครูผู้ดูแล'
+                    });
+                  }}
+                  style={{
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '12px',
+                    padding: '10px 16px',
+                    fontSize: '0.88rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+                  }}
+                >
+                  <CheckCircle2 size={16} />
+                  <span>✓ ตรวจสอบแล้ว - ยืนยันรับคืน</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Stat Counter Cards Grid */}
       <div className="stat-grid">

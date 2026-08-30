@@ -620,11 +620,36 @@ export function AppProvider({ children }) {
     if (!studentId || !studentId.trim()) return null;
     const cleanId = studentId.trim().toLowerCase();
     return loans.find(l => 
-      (l.status === 'active' || l.status === 'overdue') &&
+      (l.status === 'active' || l.status === 'overdue' || l.status === 'pending_return') &&
       ((l.studentId && l.studentId.trim().toLowerCase() === cleanId) || 
        (l.borrowerId && l.borrowerId.trim().toLowerCase() === cleanId) ||
        (l.borrowerStudentId && l.borrowerStudentId.trim().toLowerCase() === cleanId))
     ) || null;
+  };
+
+  // Student scans equipment to request return -> changes status to 'pending_return'
+  const requestReturnByStudent = (loanId, notes = '') => {
+    const targetLoan = loans.find(l => l.id === loanId);
+    if (!targetLoan) return false;
+
+    const nowIso = new Date().toISOString();
+    
+    // Update local state
+    setLoans(prev => prev.map(l => l.id === loanId ? {
+      ...l,
+      status: 'pending_return',
+      returnRequestedAt: nowIso,
+      returnNotes: notes || 'นักเรียนสแกนแจ้งส่งคืนที่โต๊ะอาจารย์'
+    } : l));
+
+    // Save to Supabase Cloud
+    supabaseApi.patch(`loans?id=eq.${loanId}`, {
+      status: 'pending_return',
+      notes: notes || 'นักเรียนสแกนแจ้งส่งคืนที่โต๊ะอาจารย์'
+    }).catch(err => console.warn('Supabase request return update error:', err));
+
+    showToast('แจ้งส่งคืนสำเร็จ! กรุณานำอุปกรณ์ไปวางที่โต๊ะเพื่อรอคุณครูตรวจสอบ', 'success');
+    return true;
   };
 
   const createStudentLoan = ({ studentId, name, grade, room, item, phone, lineId }) => {
@@ -955,6 +980,7 @@ export function AppProvider({ children }) {
         // Student Kiosk Actions & Restriction Checks
         getActiveLoanByStudent,
         createStudentLoan,
+        requestReturnByStudent,
         findLoanForReturn,
         // Equipment & Borrower CRUD
         addEquipment,

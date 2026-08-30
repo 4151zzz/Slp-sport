@@ -76,6 +76,7 @@ export default function StudentKiosk() {
     resetGradeConfig, 
     getActiveLoanByStudent, 
     createStudentLoan, 
+    requestReturnByStudent,
     processReturn, 
     reportReturnIssue, 
     transferStudentLoan, 
@@ -799,136 +800,219 @@ export default function StudentKiosk() {
           {/* Top accent bar */}
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: 'linear-gradient(90deg, #0284c7 0%, #38bdf8 50%, #2563eb 100%)' }} />
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+          {activeLoan.status === 'pending_return' ? (
+            /* ⏳ PENDING TEACHER VERIFICATION CARD */
             <div style={{
-              display: 'inline-flex',
+              display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
-              gap: '6px',
-              background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.12) 0%, rgba(37, 99, 235, 0.08) 100%)',
-              padding: '4px 12px',
-              borderRadius: '999px',
-              fontSize: '0.82rem',
-              fontWeight: 800,
-              color: '#0284c7',
-              border: '1px solid rgba(2, 132, 199, 0.25)'
+              textAlign: 'center',
+              gap: '16px',
+              padding: '10px 0'
             }}>
-              <span>📦 รายการที่กำลังยืมอยู่</span>
-            </div>
-            <button
-              onClick={handleSwitchStudent}
-              style={{
-                background: 'linear-gradient(135deg, #f8fafc 0%, #f0f4f8 100%)',
-                border: '1px solid #cbd5e1',
-                padding: '4px 12px',
-                borderRadius: '10px',
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                color: '#475569',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              สลับรหัสนักเรียน 👤
-            </button>
-          </div>
-
-          {/* Active Item Card */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '18px',
-            background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 60%, #e0f2fe 100%)',
-            padding: '18px',
-            borderRadius: '18px',
-            border: '1px solid rgba(56, 189, 248, 0.4)',
-            boxShadow: '0 4px 16px rgba(2, 132, 199, 0.1) inset'
-          }}>
-            <div style={{ fontSize: '46px', lineHeight: 1 }}>
-              {activeLoan.items?.[0]?.image || '⚽'}
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '0.8rem', color: '#0284c7', fontWeight: 800, marginBottom: '2px' }}>
-                ผู้ยืม: {activeLoan.borrowerName}
-              </div>
-              <h2 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#0f172a', margin: '2px 0' }}>
-                {activeLoan.items?.[0]?.name}
-              </h2>
-              <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
-                รหัสรายการ: <strong>{activeLoan.id}</strong> • ยืมเมื่อ: {formatDate(activeLoan.borrowDate)}
-              </div>
-            </div>
-          </div>
-
-          {/* Action Guidance & Scan Button */}
-          <div style={{
-            background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
-            border: '1.5px solid rgba(245, 158, 11, 0.4)',
-            borderRadius: '16px',
-            padding: '12px 16px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            fontSize: '0.84rem',
-            color: '#92400e'
-          }}>
-            <span style={{ fontSize: '20px', flexShrink: 0 }}>🔒</span>
-            <span>
-              <strong>ต้องนำอุปกรณ์มาสแกนที่โต๊ะอาจารย์เท่านั้น</strong> — เพื่อความปลอดภัยและยืนยันว่านำอุปกรณ์มาส่งคืนจริง
-            </span>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
-            <button
-              type="button"
-              onClick={() => {
-                setKioskMode('return');
-                handleScanReturnEquipment();
-              }}
-              style={{
-                background: 'linear-gradient(135deg, #10b981 0%, #059669 60%, #047857 100%)',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '16px',
-                padding: '16px 20px',
-                fontSize: '1.02rem',
-                fontWeight: 900,
-                cursor: 'pointer',
+              <div style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                color: '#fff',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '8px',
-                boxShadow: '0 8px 24px rgba(16, 185, 129, 0.35), 0 1px 0 rgba(255, 255, 255, 0.2) inset',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <Scan size={20} />
-              <span>สแกนบาร์โค้ดที่โต๊ะอาจารย์เพื่อคืน</span>
-            </button>
+                fontSize: '32px',
+                boxShadow: '0 8px 24px rgba(245, 158, 11, 0.35)'
+              }}>
+                ⏳
+              </div>
 
-            <button
-              type="button"
-              onClick={() => setIsIssueModalOpen(true)}
-              style={{
-                background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-                color: '#475569',
-                border: '1.5px solid #cbd5e1',
-                borderRadius: '16px',
-                padding: '16px 20px',
-                fontSize: '0.92rem',
-                fontWeight: 800,
-                cursor: 'pointer',
+              <div>
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: '#fef3c7',
+                  color: '#92400e',
+                  padding: '4px 14px',
+                  borderRadius: '999px',
+                  fontSize: '0.84rem',
+                  fontWeight: 800,
+                  marginBottom: '8px'
+                }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#d97706', display: 'inline-block' }} />
+                  <span>สแกนแจ้งส่งคืนแล้ว • รอคุณครูตรวจสอบ</span>
+                </div>
+                <h3 style={{ margin: '0 0 6px 0', fontSize: '1.25rem', fontWeight: 900, color: '#0f172a' }}>
+                  กรุณานำอุปกรณ์ไปวางที่โต๊ะอาจารย์
+                </h3>
+                <p style={{ margin: 0, fontSize: '0.9rem', color: '#64748b' }}>
+                  ผู้ยืม: <strong>{activeLoan.borrowerName}</strong> | อุปกรณ์: <strong>{activeLoan.items?.[0]?.name}</strong>
+                </p>
+                <div style={{ fontSize: '0.82rem', color: '#92400e', marginTop: '10px', background: '#fffbeb', padding: '10px 14px', borderRadius: '12px', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+                  คุณครูจะตรวจสอบสภาพอุปกรณ์และกดยืนยันรับคืนในระบบให้ครับ
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleSwitchStudent}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '12px',
+                  padding: '8px 18px',
+                  fontSize: '0.84rem',
+                  fontWeight: 700,
+                  color: '#475569',
+                  cursor: 'pointer',
+                  marginTop: '4px'
+                }}
+              >
+                สลับรหัสนักเรียนคนอื่น 👤
+              </button>
+            </div>
+          ) : (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.12) 0%, rgba(37, 99, 235, 0.08) 100%)',
+                  padding: '4px 12px',
+                  borderRadius: '999px',
+                  fontSize: '0.82rem',
+                  fontWeight: 800,
+                  color: '#0284c7',
+                  border: '1px solid rgba(2, 132, 199, 0.25)'
+                }}>
+                  <span>📦 รายการที่กำลังยืมอยู่</span>
+                </div>
+                <button
+                  onClick={handleSwitchStudent}
+                  style={{
+                    background: 'linear-gradient(135deg, #f8fafc 0%, #f0f4f8 100%)',
+                    border: '1px solid #cbd5e1',
+                    padding: '4px 12px',
+                    borderRadius: '10px',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    color: '#475569',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  สลับรหัสนักเรียน 👤
+                </button>
+              </div>
+
+              {/* Active Item Card */}
+              <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <AlertTriangle size={18} color="#d97706" />
-              <span>ส่งต่อ / แจ้งปัญหาอุปกรณ์ ➔</span>
-            </button>
-          </div>
+                gap: '18px',
+                background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 60%, #e0f2fe 100%)',
+                padding: '18px',
+                borderRadius: '18px',
+                border: '1px solid rgba(56, 189, 248, 0.4)',
+                boxShadow: '0 4px 16px rgba(2, 132, 199, 0.1) inset'
+              }}>
+                <div style={{ fontSize: '46px', lineHeight: 1 }}>
+                  {activeLoan.items?.[0]?.image || '⚽'}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '0.8rem', color: '#0284c7', fontWeight: 800, marginBottom: '2px' }}>
+                    ผู้ยืม: {activeLoan.borrowerName}
+                  </div>
+                  <h2 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#0f172a', margin: '2px 0' }}>
+                    {activeLoan.items?.[0]?.name}
+                  </h2>
+                  <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                    รหัสรายการ: <strong>{activeLoan.id}</strong> • ยืมเมื่อ: {formatDate(activeLoan.borrowDate)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Guidance & Scan Button */}
+              <div style={{
+                background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
+                border: '1.5px solid rgba(245, 158, 11, 0.4)',
+                borderRadius: '16px',
+                padding: '12px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                fontSize: '0.84rem',
+                color: '#92400e'
+              }}>
+                <span style={{ fontSize: '20px', flexShrink: 0 }}>🔒</span>
+                <span>
+                  <strong>ต้องนำอุปกรณ์มาสแกนที่โต๊ะอาจารย์</strong> — เมื่อสแกนแล้ว รายการจะไปแจ้งเตือนที่หน้าจอคุณครูเพื่อตรวจสอบและกดยืนยันรับคืน
+                </span>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    openScanner((scannedCode) => {
+                      const clean = scannedCode.trim().toLowerCase();
+                      const isMatch = (activeLoan.id && activeLoan.id.toLowerCase() === clean) ||
+                                      (activeLoan.studentId && activeLoan.studentId.toLowerCase() === clean) ||
+                                      activeLoan.items?.some(i => (i.code && i.code.toLowerCase() === clean) || (i.equipmentId && i.equipmentId.toLowerCase() === clean));
+                      if (isMatch) {
+                        requestReturnByStudent(activeLoan.id);
+                      } else {
+                        showToast(`รหัส ${scannedCode} ไม่ตรงกับอุปกรณ์ที่ยืมอยู่`, 'warning');
+                      }
+                    }, 'สแกน Barcode/QR อุปกรณ์เพื่อแจ้งคืน');
+                  }}
+                  style={{
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 60%, #047857 100%)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '16px',
+                    padding: '16px 20px',
+                    fontSize: '1.02rem',
+                    fontWeight: 900,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    boxShadow: '0 8px 24px rgba(16, 185, 129, 0.35), 0 1px 0 rgba(255, 255, 255, 0.2) inset',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <Scan size={20} />
+                  <span>สแกนบาร์โค้ดแจ้งส่งคืน (รอครูตรวจ)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsIssueModalOpen(true)}
+                  style={{
+                    background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                    color: '#475569',
+                    border: '1.5px solid #cbd5e1',
+                    borderRadius: '16px',
+                    padding: '16px 20px',
+                    fontSize: '0.92rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <AlertTriangle size={18} color="#d97706" />
+                  <span>ส่งต่อ / แจ้งปัญหาอุปกรณ์ ➔</span>
+                </button>
+              </div>
+            </>
+          )}
         </div>
       ) : (
         /* ============================================================ */
