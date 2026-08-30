@@ -1440,23 +1440,23 @@ export default function StudentKiosk() {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                       <select
                         className="form-select"
-                        value={studentGrade}
-                        onChange={(e) => setStudentGrade(e.target.value)}
+                        value={grade}
+                        onChange={(e) => setGrade(e.target.value)}
                         style={{ fontSize: '0.95rem', fontWeight: 700, background: '#f8fafc', marginBottom: 0 }}
                       >
-                        {(gradeConfig?.grades || ['ม.1', 'ม.2', 'ม.3', 'ม.4', 'ม.5', 'ม.6', 'ครู / บุคลากร']).map((g) => (
+                        {gradesList.map((g) => (
                           <option key={g} value={g}>{g}</option>
                         ))}
                       </select>
 
                       <select
                         className="form-select"
-                        value={studentRoom}
-                        onChange={(e) => setStudentRoom(e.target.value)}
+                        value={room}
+                        onChange={(e) => setRoom(e.target.value)}
                         style={{ fontSize: '0.95rem', fontWeight: 700, background: '#f8fafc', marginBottom: 0 }}
                       >
-                        {(gradeConfig?.rooms || ['ห้อง 1', 'ห้อง 2', 'ห้อง 3', 'ห้อง 4', 'ห้อง 5', 'ห้อง 6', 'ห้อง 7', 'ห้อง 8', 'ห้อง 9', 'ห้อง 10']).map((r) => (
-                          <option key={r} value={r}>{r}</option>
+                        {roomsList.map((r) => (
+                          <option key={r} value={r}>ห้อง {r}</option>
                         ))}
                       </select>
                     </div>
