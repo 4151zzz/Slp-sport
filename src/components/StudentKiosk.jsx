@@ -801,74 +801,111 @@ export default function StudentKiosk() {
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: 'linear-gradient(90deg, #0284c7 0%, #38bdf8 50%, #2563eb 100%)' }} />
 
           {activeLoan.status === 'pending_return' ? (
-            /* ⏳ PENDING TEACHER VERIFICATION CARD */
+            /* ⏳ FIRMLY LOCKED: PENDING TEACHER VERIFICATION CARD */
             <div style={{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               textAlign: 'center',
-              gap: '16px',
-              padding: '10px 0'
+              gap: '18px',
+              padding: '16px 8px'
             }}>
-              <div style={{
-                width: '64px',
-                height: '64px',
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                color: '#fff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '32px',
-                boxShadow: '0 8px 24px rgba(245, 158, 11, 0.35)'
-              }}>
-                ⏳
+              {/* Pulsing Loading Halo */}
+              <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{
+                  position: 'absolute',
+                  width: '90px',
+                  height: '90px',
+                  borderRadius: '50%',
+                  background: 'radial-gradient(circle, rgba(245, 158, 11, 0.4) 0%, transparent 70%)',
+                  animation: 'pulseGlow 1.8s infinite'
+                }} />
+                <div style={{
+                  width: '70px',
+                  height: '70px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                  color: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '34px',
+                  boxShadow: '0 10px 28px rgba(245, 158, 11, 0.45)',
+                  zIndex: 2
+                }}>
+                  ⏳
+                </div>
               </div>
 
               <div>
                 <div style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '6px',
+                  gap: '8px',
                   background: '#fef3c7',
                   color: '#92400e',
-                  padding: '4px 14px',
+                  padding: '6px 16px',
                   borderRadius: '999px',
-                  fontSize: '0.84rem',
-                  fontWeight: 800,
-                  marginBottom: '8px'
+                  fontSize: '0.88rem',
+                  fontWeight: 900,
+                  marginBottom: '10px',
+                  border: '1.5px solid #fcd34d'
                 }}>
-                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#d97706', display: 'inline-block' }} />
-                  <span>สแกนแจ้งส่งคืนแล้ว • รอคุณครูตรวจสอบ</span>
+                  <span style={{
+                    width: '10px',
+                    height: '10px',
+                    borderRadius: '50%',
+                    background: '#f59e0b',
+                    display: 'inline-block',
+                    boxShadow: '0 0 8px #f59e0b'
+                  }} />
+                  <span>สแกนส่งคืนแล้ว • รอคุณครูตรวจสอบอุปกรณ์</span>
                 </div>
-                <h3 style={{ margin: '0 0 6px 0', fontSize: '1.25rem', fontWeight: 900, color: '#0f172a' }}>
+
+                <h2 style={{ margin: '0 0 8px 0', fontSize: '1.35rem', fontWeight: 900, color: '#0f172a' }}>
                   กรุณานำอุปกรณ์ไปวางที่โต๊ะอาจารย์
-                </h3>
-                <p style={{ margin: 0, fontSize: '0.9rem', color: '#64748b' }}>
-                  ผู้ยืม: <strong>{activeLoan.borrowerName}</strong> | อุปกรณ์: <strong>{activeLoan.items?.[0]?.name}</strong>
+                </h2>
+                
+                <p style={{ margin: 0, fontSize: '0.95rem', color: '#475569' }}>
+                  ผู้ยืม: <strong>{activeLoan.borrowerName}</strong> ({activeLoan.borrowerDepartment})
                 </p>
-                <div style={{ fontSize: '0.82rem', color: '#92400e', marginTop: '10px', background: '#fffbeb', padding: '10px 14px', borderRadius: '12px', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
-                  คุณครูจะตรวจสอบสภาพอุปกรณ์และกดยืนยันรับคืนในระบบให้ครับ
+                <div style={{ fontSize: '1rem', fontWeight: 800, color: '#0284c7', marginTop: '4px' }}>
+                  อุปกรณ์: {activeLoan.items?.[0]?.name}
+                </div>
+
+                <div style={{
+                  fontSize: '0.86rem',
+                  color: '#92400e',
+                  marginTop: '16px',
+                  background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
+                  padding: '14px 18px',
+                  borderRadius: '16px',
+                  border: '1.5px solid rgba(245, 158, 11, 0.35)',
+                  lineHeight: 1.5
+                }}>
+                  🔒 <strong>หน้าจอจะค้างหน้านี้ไว้จนกว่าคุณครูจะตรวจสอบและกดยืนยันรับคืน</strong><br/>
+                  <span style={{ color: '#b45309', fontSize: '0.8rem' }}>
+                    เมื่อคุณครูกดยืนยันในระบบ หน้าจอนี้จะปลดล็อกและกลับสู่หน้าหลักอัตโนมัติครับ
+                  </span>
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={handleSwitchStudent}
-                style={{
-                  background: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '12px',
-                  padding: '8px 18px',
-                  fontSize: '0.84rem',
-                  fontWeight: 700,
-                  color: '#475569',
-                  cursor: 'pointer',
-                  marginTop: '4px'
-                }}
-              >
-                สลับรหัสนักเรียนคนอื่น 👤
-              </button>
+              {/* Live WebSocket / Polling Heartbeat Badge */}
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: '#f0fdf4',
+                color: '#166534',
+                padding: '6px 14px',
+                borderRadius: '999px',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                border: '1px solid #bbf7d0'
+              }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+                <span>กำลังเชื่อมต่อกับหน้าจอคุณครูแบบ Real-Time</span>
+              </div>
             </div>
           ) : (
             <>

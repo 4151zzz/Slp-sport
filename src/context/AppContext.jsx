@@ -181,7 +181,7 @@ export function AppProvider({ children }) {
     }
 
     syncFromCloud();
-    const interval = setInterval(syncFromCloud, 4000); // Poll every 4 seconds
+    const interval = setInterval(syncFromCloud, 2500); // Poll every 2.5 seconds for instant multi-device unlock
     window.addEventListener('focus', syncFromCloud);
 
     return () => {
