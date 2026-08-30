@@ -1,0 +1,147 @@
+export const INITIAL_EQUIPMENT = [
+  {
+    id: 'EQ-1001',
+    name: 'ลูกฟุตบอล Molten F5V5000 (เบอร์ 5)',
+    category: 'ฟุตบอล / ฟุตซอล',
+    code: 'FB-001001',
+    totalQty: 10,
+    availableQty: 10,
+    location: 'ตู้ A1 - ชั้น 2',
+    condition: 'สมบูรณ์ (Good)',
+    status: 'available',
+    price: 1200,
+    image: '⚽',
+    notes: 'ลูกฟุตบอลหนังเย็บมาตรฐานแข่งขัน FIFA Quality Pro'
+  },
+  {
+    id: 'EQ-1002',
+    name: 'ลูกบาสเกตบอล Spalding TF-1000 (เบอร์ 7)',
+    category: 'บาสเกตบอล',
+    code: 'BB-001002',
+    totalQty: 8,
+    availableQty: 8,
+    location: 'ตู้ A2 - ชั้น 1',
+    condition: 'สมบูรณ์ (Good)',
+    status: 'available',
+    price: 1550,
+    image: '🏀',
+    notes: 'ลูกบาสหนังในร่ม ผิวสัมผัสกระชับมือ'
+  },
+  {
+    id: 'EQ-1003',
+    name: 'ลูกวอลเลย์บอล Mikasa V200W',
+    category: 'วอลเลย์บอล',
+    code: 'VB-001003',
+    totalQty: 6,
+    availableQty: 6,
+    location: 'ตู้ A3 - ชั้น 2',
+    condition: 'สมบูรณ์ (Good)',
+    status: 'available',
+    price: 1890,
+    image: '🏐',
+    notes: 'ลูกวอลเลย์บอลแข่งขันอย่างเป็นทางการ 18 แผ่น'
+  },
+  {
+    id: 'EQ-1004',
+    name: 'ชุดไม้แบดมินตัน Yonex Astrox พร้อมปลอก (คู่)',
+    category: 'แบดมินตัน',
+    code: 'BM-001004',
+    totalQty: 12,
+    availableQty: 12,
+    location: 'ตู้ B1 - แร็คแขวน',
+    condition: 'สมบูรณ์ (Good)',
+    status: 'available',
+    price: 990,
+    image: '🏸',
+    notes: 'พร้อมลูกขนไก่ 1 หลอด'
+  },
+  {
+    id: 'EQ-1005',
+    name: 'ลูกเปตองแข่งขัน Marathon (ชุด 3 ลูก)',
+    category: 'เปตอง',
+    code: 'PT-001005',
+    totalQty: 5,
+    availableQty: 5,
+    location: 'ตู้ B2 - ลิ้นชักล่าง',
+    condition: 'สมบูรณ์ (Good)',
+    status: 'available',
+    price: 2400,
+    image: '⚪',
+    notes: 'พร้อมกระเป๋าและลูกแก่นไม้'
+  },
+  {
+    id: 'EQ-1006',
+    name: 'นาฬิกาจับเวลาดิจิทัล Seiko Stopwatch S056',
+    category: 'อุปกรณ์สนาม & กรรมการ',
+    code: 'SW-001006',
+    totalQty: 4,
+    availableQty: 4,
+    location: 'ตู้ C1 - ลิ้นชักนิรภัย',
+    condition: 'สมบูรณ์ (Good)',
+    status: 'available',
+    price: 1450,
+    image: '⏱️',
+    notes: 'กันน้ำ แบตเตอรี่เต็ม บันทึกได้ 100 Lap'
+  },
+  {
+    id: 'EQ-1007',
+    name: 'ชุดกรวยซ้อมกีฬาสีส้ม 12 นิ้ว (ชุด 10 อัน)',
+    category: 'อุปกรณ์ฝึกซ้อม & ฟิตเนส',
+    code: 'CN-001007',
+    totalQty: 15,
+    availableQty: 15,
+    location: 'ตู้ D1 - กรงจัดเก็บ',
+    condition: 'สมบูรณ์ (Good)',
+    status: 'available',
+    price: 450,
+    image: '🔶',
+    notes: 'กรวยมาร์กเกอร์ยืดหยุ่นไม่แตกหักง่าย'
+  },
+  {
+    id: 'EQ-1008',
+    name: 'ชุดเสื้อเอี๊ยมแบ่งทีม สีเขียวสะท้อนแสง (10 ตัว)',
+    category: 'เสื้อผ้า & เบ็ดเตล็ด',
+    code: 'BB-001008',
+    totalQty: 8,
+    availableQty: 8,
+    location: 'ตู้ D2 - ชั้นบน',
+    condition: 'สมบูรณ์ (Good)',
+    status: 'available',
+    price: 650,
+    image: '🎽',
+    notes: 'ผ้าตาข่ายระบายอากาศ ซักทำความสะอาดแล้ว'
+  },
+  {
+    id: 'EQ-1009',
+    name: 'นกหวีด Fox 40 Classic พร้อมสายคล้องคอ',
+    category: 'อุปกรณ์สนาม & กรรมการ',
+    code: 'WH-001009',
+    totalQty: 10,
+    availableQty: 10,
+    location: 'ตู้ C1 - ลิ้นชักเล็ก',
+    condition: 'สมบูรณ์ (Good)',
+    status: 'available',
+    price: 320,
+    image: '📢',
+    notes: 'เสียงแหลมคมชัด 115 dB ปลอดลูกกลิ้ง'
+  },
+  {
+    id: 'EQ-1010',
+    name: 'โต๊ะปิงปองพับได้ Butterfly พร้อมตาข่ายแข่งขัน',
+    category: 'ปิงปอง / เทเบิลเทนนิส',
+    code: 'TT-001010',
+    totalQty: 2,
+    availableQty: 2,
+    location: 'โถงโรงยิม 2',
+    condition: 'สมบูรณ์ (Good)',
+    status: 'available',
+    price: 12500,
+    image: '🏓',
+    notes: 'โต๊ะแข่งขันมาตรฐาน ITTF approved พร้อมล้อเลื่อน'
+  }
+];
+
+// Clean empty arrays ready for real production use
+export const INITIAL_BORROWERS = [];
+export const INITIAL_LOANS = [];
+export const INITIAL_FOLLOWUPS = [];
