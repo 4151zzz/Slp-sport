@@ -18,6 +18,9 @@ export const supabaseApi = {
           'Content-Type': 'application/json'
         }
       });
+      if (!res.ok) {
+        return { data: null, error: `HTTP ${res.status}` };
+      }
       const data = await res.json();
       return { data, error: null };
     } catch (error) {
@@ -25,11 +28,31 @@ export const supabaseApi = {
     }
   },
 
-  async post(table, payload) {
+  async upsert(table, payload) {
     if (!isSupabaseConfigured) return { data: null, error: 'Not configured' };
     try {
       const res = await fetch(`${supabaseUrl}/rest/v1/${table}`, {
         method: 'POST',
+        headers: {
+          'apikey': supabaseAnonKey,
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates,return=representation'
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error };
+    }
+  },
+
+  async patch(table, query, payload) {
+    if (!isSupabaseConfigured) return { data: null, error: 'Not configured' };
+    try {
+      const res = await fetch(`${supabaseUrl}/rest/v1/${table}?${query}`, {
+        method: 'PATCH',
         headers: {
           'apikey': supabaseAnonKey,
           'Authorization': `Bearer ${supabaseAnonKey}`,

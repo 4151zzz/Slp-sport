@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { INITIAL_EQUIPMENT, INITIAL_BORROWERS, INITIAL_LOANS, INITIAL_FOLLOWUPS } from '../data/seedData';
 import { playScanSound } from '../utils/barcodeAudio';
+import { supabaseApi } from '../lib/supabase';
 
 const AppContext = createContext();
 
@@ -135,6 +136,67 @@ export function AppProvider({ children }) {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.GRADE_CONFIG, JSON.stringify(gradeConfig));
   }, [gradeConfig]);
+
+  // ☁️ Multi-Device Real-time Supabase Cloud Synchronization
+  useEffect(() => {
+    let isMounted = true;
+
+    async function syncFromCloud() {
+      try {
+        const { data: cloudLoans } = await supabaseApi.get('loans', 'order=borrow_date.desc&limit=100');
+        if (isMounted && cloudLoans && Array.isArray(cloudLoans) && cloudLoans.length > 0) {
+          setLoans(prev => {
+            const merged = [...prev];
+            cloudLoans.forEach(cLoan => {
+              const existingIdx = merged.findIndex(l => l.id === cLoan.id);
+              const formattedLoan = {
+                id: cLoan.id,
+                studentId: cLoan.borrower_id || '',
+                borrowerStudentId: cLoan.borrower_id || '',
+                borrowerName: cLoan.borrower_name || 'นักเรียน',
+                studentName: (cLoan.borrower_name || '').split(' (')[0],
+                grade: cLoan.grade || 'ม.1',
+                room: cLoan.room || '1',
+                phone: cLoan.phone || '',
+                lineId: cLoan.line_id || '',
+                borrowDate: cLoan.borrow_date || cLoan.created_at,
+                dueDate: cLoan.return_due || new Date().toISOString(),
+                returnDate: cLoan.return_date,
+                status: cLoan.status || 'active',
+                items: [
+                  {
+                    equipmentId: cLoan.item_id || 'SP-01',
+                    code: cLoan.item_barcode || '',
+                    name: cLoan.item_name || 'อุปกรณ์กีฬา',
+                    image: cLoan.item_image || '⚽',
+                    qty: 1
+                  }
+                ]
+              };
+              if (existingIdx >= 0) {
+                merged[existingIdx] = { ...merged[existingIdx], ...formattedLoan };
+              } else {
+                merged.unshift(formattedLoan);
+              }
+            });
+            return merged;
+          });
+        }
+      } catch (err) {
+        console.warn('Supabase auto-sync notification:', err);
+      }
+    }
+
+    syncFromCloud();
+    const interval = setInterval(syncFromCloud, 4000); // Poll every 4 seconds
+    window.addEventListener('focus', syncFromCloud);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+      window.removeEventListener('focus', syncFromCloud);
+    };
+  }, []);
 
   const updateGradeConfig = (newConfig) => {
     setGradeConfig(prev => ({ ...prev, ...newConfig }));
@@ -369,6 +431,13 @@ export function AppProvider({ children }) {
     }));
 
     showToast(`รับคืนอุปกรณ์รหัส ${loanId} เรียบร้อยแล้ว`, 'success');
+
+    // Sync return to Supabase Cloud
+    supabaseApi.patch('loans', `id=eq.${loanId}`, {
+      status: 'returned',
+      return_date: nowIso
+    }).catch(err => console.warn('Supabase return sync error:', err));
+
     return true;
   };
 
@@ -679,6 +748,25 @@ export function AppProvider({ children }) {
     setLoans(prev => [newLoan, ...prev]);
     setReceiptLoan(newLoan);
     showToast(`ยืม "${targetEq.name}" สำเร็จเรียบร้อย!`, 'success');
+
+    // ☁️ Sync new loan to Supabase Cloud Database (Live to all devices)
+    supabaseApi.upsert('loans', {
+      id: newId,
+      borrower_id: cleanStudentId,
+      borrower_name: `${name.trim()} (${grade}/${room})`,
+      grade: grade || 'ม.1',
+      room: room || '1',
+      phone: phone ? phone.trim() : '',
+      line_id: lineId ? lineId.trim() : '',
+      item_id: targetEq.id,
+      item_name: targetEq.name,
+      item_image: targetEq.image,
+      item_barcode: targetEq.code,
+      borrow_date: newLoan.borrowDate,
+      return_due: newLoan.dueDate,
+      status: 'active'
+    }).catch(err => console.warn('Supabase loan creation sync error:', err));
+
     return { success: true, loan: newLoan };
   };
 
