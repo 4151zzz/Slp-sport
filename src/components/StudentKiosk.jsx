@@ -859,18 +859,38 @@ export default function StudentKiosk() {
             </div>
           </div>
 
-          {/* Action Buttons */}
+          {/* Action Guidance & Scan Button */}
+          <div style={{
+            background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
+            border: '1.5px solid rgba(245, 158, 11, 0.4)',
+            borderRadius: '16px',
+            padding: '12px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            fontSize: '0.84rem',
+            color: '#92400e'
+          }}>
+            <span style={{ fontSize: '20px', flexShrink: 0 }}>🔒</span>
+            <span>
+              <strong>ต้องนำอุปกรณ์มาสแกนที่โต๊ะอาจารย์เท่านั้น</strong> — เพื่อความปลอดภัยและยืนยันว่านำอุปกรณ์มาส่งคืนจริง
+            </span>
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
             <button
               type="button"
-              onClick={handleConfirmReturn}
+              onClick={() => {
+                setKioskMode('return');
+                handleScanReturnEquipment();
+              }}
               style={{
                 background: 'linear-gradient(135deg, #10b981 0%, #059669 60%, #047857 100%)',
                 color: '#ffffff',
                 border: 'none',
                 borderRadius: '16px',
                 padding: '16px 20px',
-                fontSize: '1.08rem',
+                fontSize: '1.02rem',
                 fontWeight: 900,
                 cursor: 'pointer',
                 display: 'flex',
@@ -881,32 +901,32 @@ export default function StudentKiosk() {
                 transition: 'all 0.2s ease'
               }}
             >
-              <RotateCcw size={20} />
-              <span>กดคืนอุปกรณ์ชิ้นนี้</span>
+              <Scan size={20} />
+              <span>สแกนบาร์โค้ดที่โต๊ะอาจารย์เพื่อคืน</span>
             </button>
 
             <button
               type="button"
               onClick={() => setIsIssueModalOpen(true)}
               style={{
-                background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
-                color: '#92400e',
-                border: '1.5px solid rgba(245, 158, 11, 0.5)',
+                background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                color: '#475569',
+                border: '1.5px solid #cbd5e1',
                 borderRadius: '16px',
                 padding: '16px 20px',
-                fontSize: '0.95rem',
+                fontSize: '0.92rem',
                 fontWeight: 800,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '8px',
-                boxShadow: '0 4px 16px rgba(245, 158, 11, 0.15)',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
                 transition: 'all 0.2s ease'
               }}
             >
               <AlertTriangle size={18} color="#d97706" />
-              <span>ส่งต่อ / แจ้งปัญหา ➔</span>
+              <span>ส่งต่อ / แจ้งปัญหาอุปกรณ์ ➔</span>
             </button>
           </div>
         </div>
