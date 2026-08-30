@@ -6,10 +6,10 @@ import { supabaseApi } from '../lib/supabase';
 const AppContext = createContext();
 
 const STORAGE_KEYS = {
-  EQUIPMENT: 'sportequip_items_v4_clean',
-  BORROWERS: 'sportequip_borrowers_v4_clean',
-  LOANS: 'sportequip_loans_v5_clean',
-  FOLLOWUPS: 'sportequip_followups_v4_clean',
+  EQUIPMENT: 'sportequip_items_v6_prod',
+  BORROWERS: 'sportequip_borrowers_v6_prod',
+  LOANS: 'sportequip_loans_v6_prod',
+  FOLLOWUPS: 'sportequip_followups_v6_prod',
   GRADE_CONFIG: 'sportequip_grades_v4_saluang',
   TEACHER_PIN: 'sportequip_teacher_pin_v2_2569'
 };

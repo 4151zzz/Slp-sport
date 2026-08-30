@@ -64,7 +64,7 @@ const ISSUE_REASONS = [
   { id: 'other', label: 'อื่นๆ (ระบุรายละเอียดเพิ่มเติม)', desc: 'สาเหตุอื่นๆ นอกเหนือจากที่ระบุข้างต้น', icon: '📝', color: '#64748b' }
 ];
 
-const CURRENT_STUDENT_SESSION_KEY = 'sportequip_active_student_id_v1';
+const CURRENT_STUDENT_SESSION_KEY = 'sportequip_active_student_id_v2';
 
 export default function StudentKiosk() {
   const { 
