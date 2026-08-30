@@ -189,7 +189,7 @@ function TeacherLoginModal({ isOpen, onClose, onLogin }) {
           gap: '6px'
         }}>
           <ShieldCheck size={14} />
-          <span>รหัสเริ่มต้น: 1234 (เปลี่ยนได้ในหน้ารายงาน & ระบบ)</span>
+          <span>พัฒนาโดย wunPiyapong </span>
         </div>
       </div>
     </div>
