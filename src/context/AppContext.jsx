@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { INITIAL_EQUIPMENT, INITIAL_BORROWERS, INITIAL_LOANS, INITIAL_FOLLOWUPS } from '../data/seedData';
 import { playScanSound } from '../utils/barcodeAudio';
 import { supabaseApi } from '../lib/supabase';
@@ -90,16 +90,10 @@ export function AppProvider({ children }) {
     return localStorage.getItem(STORAGE_KEYS.TEACHER_PIN) || DEFAULT_TEACHER_PIN;
   });
 
-  // Pending return IDs: loans where student has scanned to return but teacher hasn't confirmed yet
-  // Stored in localStorage so it survives Supabase sync overwrites
-  const [pendingReturnIds, setPendingReturnIds] = useState(() => {
-    try {
-      const saved = localStorage.getItem('sportequip_pending_return_ids_v1');
-      return saved ? new Set(JSON.parse(saved)) : new Set();
-    } catch {
-      return new Set();
-    }
-  });
+  // In-memory ref: track loan IDs where student has requested return but teacher hasn't confirmed yet
+  // Using useRef (not localStorage) - cleaner, no disk writes needed
+  // The ref persists across re-renders and protects against sync loop overwriting pending_return back to active
+  const pendingReturnRef = useRef(new Set());
 
   // Sync activeTab to sessionStorage
   useEffect(() => {
@@ -157,20 +151,15 @@ export function AppProvider({ children }) {
         const { data: cloudLoans } = await supabaseApi.get('loans', 'order=borrow_date.desc&limit=100');
         if (isMounted && cloudLoans && Array.isArray(cloudLoans)) {
           const formattedList = cloudLoans.map(cLoan => {
-            // Determine correct status: if this loan is locally marked as pending_return,
-            // KEEP that status even if Supabase hasn't updated yet (prevents sync overwrite)
             const cloudStatus = cLoan.status || 'active';
-            const localPending = pendingReturnIds.has(cLoan.id);
-            const effectiveStatus = localPending && cloudStatus === 'active' ? 'pending_return' : cloudStatus;
+            // If student requested return locally but Supabase hasn't confirmed yet,
+            // preserve 'pending_return' status (no localStorage needed)
+            const isLocallyPending = pendingReturnRef.current.has(cLoan.id);
+            const effectiveStatus = isLocallyPending && cloudStatus === 'active' ? 'pending_return' : cloudStatus;
 
-            // If teacher confirmed (status = 'returned'), remove from pendingReturnIds
-            if (cloudStatus === 'returned' && localPending) {
-              setPendingReturnIds(prev => {
-                const next = new Set(prev);
-                next.delete(cLoan.id);
-                localStorage.setItem('sportequip_pending_return_ids_v1', JSON.stringify([...next]));
-                return next;
-              });
+            // If Supabase now shows 'returned', clear from our in-memory ref (teacher confirmed)
+            if (cloudStatus === 'returned') {
+              pendingReturnRef.current.delete(cLoan.id);
             }
 
             return {
@@ -412,7 +401,7 @@ export function AppProvider({ children }) {
     return newLoan;
   };
 
-  // Return Loan
+  // Return Loan (Teacher confirms)
   const processReturn = (loanId, returnDetails) => {
     const targetLoan = loans.find(l => l.id === loanId);
     if (!targetLoan) return false;
@@ -421,13 +410,8 @@ export function AppProvider({ children }) {
     const notes = returnDetails.notes || '';
     const nowIso = new Date().toISOString();
 
-    // Remove from pendingReturnIds since teacher is confirming the return
-    setPendingReturnIds(prev => {
-      const next = new Set(prev);
-      next.delete(loanId);
-      localStorage.setItem('sportequip_pending_return_ids_v1', JSON.stringify([...next]));
-      return next;
-    });
+    // Clear from in-memory ref (no localStorage needed)
+    pendingReturnRef.current.delete(loanId);
 
     setLoans(prev => prev.map(l => {
       if (l.id === loanId) {
@@ -664,35 +648,36 @@ export function AppProvider({ children }) {
     ) || null;
   };
 
-  // Student scans equipment to request return -> changes status to 'pending_return'
-  // Also adds loanId to pendingReturnIds so sync loop never overwrites it back to 'active'
-  const requestReturnByStudent = (loanId, notes = '') => {
+  // Student scans equipment to request return -> awaits Supabase PATCH, then sets local pending_return
+  // Uses in-memory ref (no localStorage) to protect status from sync loop overwriting
+  const requestReturnByStudent = async (loanId, notes = '') => {
     const targetLoan = loans.find(l => l.id === loanId);
     if (!targetLoan) return false;
 
     const nowIso = new Date().toISOString();
+    const returnNote = notes || 'นักเรียนสแกนแจ้งส่งคืนที่โต๊ะอาจารย์';
 
-    // 1. Add to pendingReturnIds FIRST so sync loop protects it immediately
-    setPendingReturnIds(prev => {
-      const next = new Set(prev);
-      next.add(loanId);
-      localStorage.setItem('sportequip_pending_return_ids_v1', JSON.stringify([...next]));
-      return next;
-    });
+    // 1. Mark in-memory ref IMMEDIATELY so sync loop won't overwrite while we await
+    pendingReturnRef.current.add(loanId);
 
-    // 2. Update local state
+    // 2. Update local state to show lock screen instantly
     setLoans(prev => prev.map(l => l.id === loanId ? {
       ...l,
       status: 'pending_return',
       returnRequestedAt: nowIso,
-      returnNotes: notes || 'นักเรียนสแกนแจ้งส่งคืนที่โต๊ะอาจารย์'
+      returnNotes: returnNote
     } : l));
 
-    // 3. Save to Supabase Cloud (async, ok if slow)
-    supabaseApi.patch(`loans?id=eq.${loanId}`, {
-      status: 'pending_return',
-      notes: notes || 'นักเรียนสแกนแจ้งส่งคืนที่โต๊ะอาจารย์'
-    }).catch(err => console.warn('Supabase request return update error:', err));
+    // 3. Await Supabase PATCH (so subsequent syncs pull correct status)
+    try {
+      await supabaseApi.patch(`loans?id=eq.${loanId}`, {
+        status: 'pending_return',
+        notes: returnNote
+      });
+    } catch (err) {
+      console.warn('Supabase request return update error:', err);
+      // Even if Supabase fails, the ref keeps local state protected
+    }
 
     showToast('แจ้งส่งคืนสำเร็จ! กรุณานำอุปกรณ์ไปวางที่โต๊ะเพื่อรอคุณครูตรวจสอบ', 'success');
     return true;
