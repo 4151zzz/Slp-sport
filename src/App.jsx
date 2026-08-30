@@ -302,7 +302,10 @@ export default function App() {
   return (
     <AppProvider>
       {isLoading && <LoadingScreen onFinish={() => setIsLoading(false)} />}
-      <MainAppContent />
+      {/* Keep MainAppContent always mounted but invisible while loading to prevent white flash */}
+      <div style={{ visibility: isLoading ? 'hidden' : 'visible' }}>
+        <MainAppContent />
+      </div>
     </AppProvider>
   );
 }

@@ -553,6 +553,136 @@ export default function StudentKiosk() {
     }
   };
 
+  // =========================================================================
+  // 🔒 HARD LOCK: If active loan is pending_return, show ONLY the waiting screen
+  // No navigation, no buttons, nothing else. Must wait for teacher to confirm.
+  // =========================================================================
+  if (activeLoan && activeLoan.status === 'pending_return') {
+    return (
+      <div className="student-kiosk-container" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        {/* School Hero Header (minimal) */}
+        <div className="school-hero-card" style={{ flexShrink: 0 }}>
+          <div className="school-hero-glow" />
+          <div className="school-hero-inner">
+            <div className="school-hero-logo">
+              <img src="/logo.png" alt="ตราโรงเรียนสระหลวงพิทยาคม" className="school-hero-logo-img" />
+              <div className="hero-logo-shimmer" />
+            </div>
+            <div className="school-hero-texts">
+              <div className="school-hero-badge">
+                <span>โรงเรียนสระหลวงพิทยาคม</span>
+              </div>
+              <h1 className="school-hero-title">ระบบยืมอุปกรณ์กีฬา</h1>
+            </div>
+          </div>
+        </div>
+
+        {/* FULL SCREEN LOCKED PENDING CARD */}
+        <div style={{
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '24px 16px'
+        }}>
+          <div style={{
+            background: 'linear-gradient(145deg, #fffbeb 0%, #fef3c7 100%)',
+            border: '2px solid #f59e0b',
+            borderRadius: '28px',
+            padding: '36px 28px',
+            maxWidth: '420px',
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            textAlign: 'center',
+            gap: '20px',
+            boxShadow: '0 20px 60px rgba(245, 158, 11, 0.25), 0 0 0 1px rgba(255,255,255,0.6) inset',
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            {/* Glowing top bar */}
+            <div style={{
+              position: 'absolute', top: 0, left: 0, right: 0, height: '4px',
+              background: 'linear-gradient(90deg, #f59e0b, #fbbf24, #f59e0b)',
+              backgroundSize: '200% 100%',
+              animation: 'shimmer 2s linear infinite'
+            }} />
+
+            {/* Pulsing Hourglass Icon */}
+            <div style={{ position: 'relative' }}>
+              <div style={{
+                position: 'absolute', inset: '-18px', borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(245,158,11,0.3) 0%, transparent 70%)',
+                animation: 'pulseGlow 1.8s ease-in-out infinite'
+              }} />
+              <div style={{
+                width: '80px', height: '80px', borderRadius: '50%',
+                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                color: '#fff', fontSize: '38px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 12px 30px rgba(245,158,11,0.5)',
+                position: 'relative', zIndex: 2
+              }}>⏳</div>
+            </div>
+
+            {/* Status pill */}
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: '8px',
+              background: '#fff', color: '#92400e', padding: '7px 18px',
+              borderRadius: '999px', fontSize: '0.9rem', fontWeight: 900,
+              border: '1.5px solid #fcd34d',
+              boxShadow: '0 2px 8px rgba(245,158,11,0.2)'
+            }}>
+              <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#f59e0b', display: 'inline-block', boxShadow: '0 0 8px #f59e0b' }} />
+              สแกนส่งคืนแล้ว • รอคุณครูตรวจสอบ
+            </div>
+
+            <div>
+              <h2 style={{ margin: '0 0 10px 0', fontSize: '1.4rem', fontWeight: 900, color: '#0f172a' }}>
+                กรุณานำอุปกรณ์ไปวางที่โต๊ะอาจารย์
+              </h2>
+              <p style={{ margin: '0 0 6px 0', fontSize: '0.95rem', color: '#475569' }}>
+                ผู้ยืม: <strong>{activeLoan.borrowerName}</strong>
+              </p>
+              <p style={{ margin: 0, fontSize: '0.95rem', color: '#475569' }}>
+                ชั้น: <strong>{activeLoan.borrowerDepartment || activeLoan.grade}</strong>
+              </p>
+              <div style={{ fontSize: '1rem', fontWeight: 800, color: '#d97706', marginTop: '6px' }}>
+                อุปกรณ์: {activeLoan.items?.[0]?.name}
+              </div>
+            </div>
+
+            {/* Lock notice */}
+            <div style={{
+              background: 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)',
+              border: '1.5px solid rgba(245,158,11,0.4)',
+              borderRadius: '16px',
+              padding: '14px 18px',
+              fontSize: '0.87rem', color: '#92400e', lineHeight: 1.6, width: '100%'
+            }}>
+              🔒 <strong>หน้าจอนี้จะค้างอยู่จนกว่าคุณครูจะกดยืนยันรับคืนในระบบ</strong><br />
+              <span style={{ fontSize: '0.8rem', color: '#b45309' }}>
+                เมื่อคุณครูกดยืนยัน หน้าจอจะปลดล็อกอัตโนมัติครับ
+              </span>
+            </div>
+
+            {/* Real-time connection badge */}
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: '8px',
+              background: '#f0fdf4', color: '#166534', padding: '7px 16px',
+              borderRadius: '999px', fontSize: '0.8rem', fontWeight: 700,
+              border: '1px solid #bbf7d0'
+            }}>
+              <span style={{ width: '9px', height: '9px', borderRadius: '50%', background: '#22c55e', display: 'inline-block', animation: 'liveBlink 1.4s infinite' }} />
+              กำลังเชื่อมต่อกับหน้าจอคุณครูแบบ Real-Time
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="student-kiosk-container">
       
