@@ -243,28 +243,36 @@ export default function StudentKiosk() {
     }
   };
 
-  // 📥 Handle Return Scan at Teacher's Desk
+  // 📥 Handle Return Scan: student scans item barcode -> sets pending_return -> locks screen
   const handleScanReturnEquipment = () => {
     openScanner((scannedCode) => {
       const clean = scannedCode.trim().toLowerCase();
-      const activeLoans = loans.filter(l => l.status === 'active' || l.status === 'overdue');
-      const matched = activeLoans.find(l => 
+      // Match against active+overdue loans
+      const returnable = loans.filter(l => l.status === 'active' || l.status === 'overdue');
+      const matched = returnable.find(l =>
         (l.id && l.id.toLowerCase() === clean) ||
         (l.studentId && l.studentId.toLowerCase() === clean) ||
         (l.borrowerStudentId && l.borrowerStudentId.toLowerCase() === clean) ||
-        l.items?.some(i => (i.code && i.code.toLowerCase() === clean) || (i.equipmentId && i.equipmentId.toLowerCase() === clean))
+        l.items?.some(i =>
+          (i.code && i.code.toLowerCase() === clean) ||
+          (i.equipmentId && i.equipmentId.toLowerCase() === clean) ||
+          (i.name && i.name.toLowerCase() === clean)
+        )
       );
 
       if (matched) {
-        setScannedReturnLoan(matched);
-        showToast(`พบรายการยืม: ${matched.borrowerName} (${matched.items?.[0]?.name})`, 'success');
+        // Auto-set studentId so activeLoan picks it up and triggers the lock screen
+        const sid = matched.studentId || matched.borrowerStudentId || matched.borrowerId || '';
+        if (sid) setStudentId(sid);
+        // Change status to pending_return — teacher must confirm
+        requestReturnByStudent(matched.id, 'นักเรียนสแกนส่งคืนที่โต๊ะอาจารย์');
       } else {
-        showToast(`ไม่พบรายการค้างยืมสำหรับรหัส: ${scannedCode}`, 'warning');
+        showToast(`ไม่พบรายการค้างยืมสำหรับรหัส: ${scannedCode}\nลองสแกนรหัสนักเรียนหรือรหัสรายการยืมแทน`, 'warning');
       }
-    }, 'สแกน Barcode / QR Code อุปกรณ์เพื่อส่งคืน');
+    }, 'สแกน Barcode / QR Code อุปกรณ์ที่จะส่งคืน');
   };
 
-  // Handle Manual Return Code Submit
+  // Handle Manual Return Code Submit -> also goes through requestReturnByStudent
   const handleManualReturnSubmit = (e) => {
     if (e) e.preventDefault();
     const clean = manualReturnCode.trim().toLowerCase();
@@ -272,45 +280,36 @@ export default function StudentKiosk() {
       showToast('กรุณาพิมพ์รหัสอุปกรณ์หรือรหัสนักเรียน', 'warning');
       return;
     }
-    const activeLoans = loans.filter(l => l.status === 'active' || l.status === 'overdue');
-    const matched = activeLoans.find(l => 
+    const returnable = loans.filter(l => l.status === 'active' || l.status === 'overdue');
+    const matched = returnable.find(l =>
       (l.id && l.id.toLowerCase() === clean) ||
       (l.studentId && l.studentId.toLowerCase() === clean) ||
       (l.borrowerStudentId && l.borrowerStudentId.toLowerCase() === clean) ||
-      l.items?.some(i => (i.code && i.code.toLowerCase() === clean) || (i.equipmentId && i.equipmentId.toLowerCase() === clean))
+      l.items?.some(i =>
+        (i.code && i.code.toLowerCase() === clean) ||
+        (i.equipmentId && i.equipmentId.toLowerCase() === clean) ||
+        (i.name && i.name.toLowerCase() === clean)
+      )
     );
 
     if (matched) {
-      setScannedReturnLoan(matched);
-      showToast(`พบรายการยืม: ${matched.borrowerName}`, 'success');
+      const sid = matched.studentId || matched.borrowerStudentId || matched.borrowerId || '';
+      if (sid) setStudentId(sid);
+      requestReturnByStudent(matched.id, 'นักเรียนพิมพ์รหัสส่งคืนที่โต๊ะอาจารย์');
+      setManualReturnCode('');
     } else {
       showToast(`ไม่พบรายการค้างยืมสำหรับรหัส: ${manualReturnCode}`, 'warning');
     }
   };
 
-  // Confirm Scanned Return at Teacher's Desk
+  // (Legacy — no longer used for student return, kept for teacher direct confirm)
   const handleConfirmReturnScanSubmit = () => {
     if (!scannedReturnLoan) return;
-    const item = scannedReturnLoan.items?.[0];
-    const success = processReturn(scannedReturnLoan.id, {
-      condition: 'สมบูรณ์ (Good)',
-      notes: 'สแกนคืนที่โต๊ะอาจารย์ (Teacher Desk Scan)',
-      receivedBy: 'จุดสแกนโต๊ะอาจารย์'
-    });
-
-    if (success) {
-      confetti({
-        particleCount: 80,
-        spread: 70,
-        origin: { y: 0.6 }
-      });
-      setReturnSuccessData({
-        loan: scannedReturnLoan,
-        item: item
-      });
-      setScannedReturnLoan(null);
-      setManualReturnCode('');
-    }
+    requestReturnByStudent(scannedReturnLoan.id, 'สแกนส่งคืนที่โต๊ะอาจารย์');
+    const sid = scannedReturnLoan.studentId || scannedReturnLoan.borrowerStudentId || '';
+    if (sid) setStudentId(sid);
+    setScannedReturnLoan(null);
+    setManualReturnCode('');
   };
 
   // Submit Borrow
@@ -1123,15 +1122,23 @@ export default function StudentKiosk() {
                   onClick={() => {
                     openScanner((scannedCode) => {
                       const clean = scannedCode.trim().toLowerCase();
-                      const isMatch = (activeLoan.id && activeLoan.id.toLowerCase() === clean) ||
-                                      (activeLoan.studentId && activeLoan.studentId.toLowerCase() === clean) ||
-                                      activeLoan.items?.some(i => (i.code && i.code.toLowerCase() === clean) || (i.equipmentId && i.equipmentId.toLowerCase() === clean));
+                      // Match broadly: loan id, student id, item code, item name, equipmentId
+                      const isMatch =
+                        (activeLoan.id && activeLoan.id.toLowerCase() === clean) ||
+                        (activeLoan.studentId && activeLoan.studentId.toLowerCase() === clean) ||
+                        (activeLoan.borrowerStudentId && activeLoan.borrowerStudentId.toLowerCase() === clean) ||
+                        activeLoan.items?.some(i =>
+                          (i.code && i.code.toLowerCase() === clean) ||
+                          (i.equipmentId && i.equipmentId.toLowerCase() === clean) ||
+                          (i.name && i.name.toLowerCase().includes(clean))
+                        );
                       if (isMatch) {
-                        requestReturnByStudent(activeLoan.id);
+                        requestReturnByStudent(activeLoan.id, 'นักเรียนสแกนแจ้งส่งคืนที่โต๊ะอาจารย์');
                       } else {
-                        showToast(`รหัส ${scannedCode} ไม่ตรงกับอุปกรณ์ที่ยืมอยู่`, 'warning');
+                        // Even if barcode doesn't match, allow if student confirms it's their item
+                        showToast(`ไม่พบรหัส "${scannedCode}" ในรายการที่ยืม — ลองสแกนบาร์โค้ดบนตัวอุปกรณ์อีกครั้ง หรือกดค้างเพื่อยืนยัน`, 'warning');
                       }
-                    }, 'สแกน Barcode/QR อุปกรณ์เพื่อแจ้งคืน');
+                    }, 'สแกน Barcode/QR อุปกรณ์เพื่อแจ้งส่งคืน');
                   }}
                   style={{
                     background: 'linear-gradient(135deg, #10b981 0%, #059669 60%, #047857 100%)',
