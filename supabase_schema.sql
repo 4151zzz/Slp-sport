@@ -1,6 +1,6 @@
 -- ============================================================
 -- 🏆 ระบบยืมอุปกรณ์กีฬา โรงเรียนสระหลวงพิทยาคม
--- SUPABASE DATABASE SCHEMA & RLS POLICIES
+-- SUPABASE DATABASE SCHEMA & RLS POLICIES (Safe Re-runnable)
 -- ============================================================
 
 -- 1. ตารางอุปกรณ์กีฬา (Equipment)
@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS public.equipment (
     total_qty INTEGER NOT NULL DEFAULT 1,
     available_qty INTEGER NOT NULL DEFAULT 1,
     image TEXT,
-    barcode TEXT UNIQUE,
+    barcode TEXT,
     condition TEXT DEFAULT 'good',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -30,20 +30,20 @@ CREATE TABLE IF NOT EXISTS public.borrowers (
 -- 3. ตารางการยืม-คืน (Loans)
 CREATE TABLE IF NOT EXISTS public.loans (
     id TEXT PRIMARY KEY,
-    borrower_id TEXT NOT NULL,
+    borrower_id TEXT,
     borrower_name TEXT NOT NULL,
-    grade TEXT NOT NULL,
-    room TEXT NOT NULL,
+    grade TEXT,
+    room TEXT,
     phone TEXT,
     line_id TEXT,
-    item_id TEXT NOT NULL,
-    item_name TEXT NOT NULL,
+    item_id TEXT,
+    item_name TEXT,
     item_image TEXT,
     item_barcode TEXT,
     borrow_date TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     return_due TIMESTAMP WITH TIME ZONE,
     return_date TIMESTAMP WITH TIME ZONE,
-    status TEXT NOT NULL DEFAULT 'active', -- 'active', 'returned', 'overdue'
+    status TEXT NOT NULL DEFAULT 'active', -- 'active', 'returned', 'overdue', 'issue_reported'
     notes TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -63,15 +63,23 @@ ALTER TABLE public.borrowers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.loans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.followups ENABLE ROW LEVEL SECURITY;
 
--- 6. RLS Policies (Allow Public Read & Write for School Terminal / Kiosk)
+-- 6. RLS Policies (Safe Drop & Re-create)
+DROP POLICY IF EXISTS "Public Read Equipment" ON public.equipment;
+DROP POLICY IF EXISTS "Public Write Equipment" ON public.equipment;
 CREATE POLICY "Public Read Equipment" ON public.equipment FOR SELECT USING (true);
 CREATE POLICY "Public Write Equipment" ON public.equipment FOR ALL USING (true);
 
+DROP POLICY IF EXISTS "Public Read Borrowers" ON public.borrowers;
+DROP POLICY IF EXISTS "Public Write Borrowers" ON public.borrowers;
 CREATE POLICY "Public Read Borrowers" ON public.borrowers FOR SELECT USING (true);
 CREATE POLICY "Public Write Borrowers" ON public.borrowers FOR ALL USING (true);
 
+DROP POLICY IF EXISTS "Public Read Loans" ON public.loans;
+DROP POLICY IF EXISTS "Public Write Loans" ON public.loans;
 CREATE POLICY "Public Read Loans" ON public.loans FOR SELECT USING (true);
 CREATE POLICY "Public Write Loans" ON public.loans FOR ALL USING (true);
 
+DROP POLICY IF EXISTS "Public Read Followups" ON public.followups;
+DROP POLICY IF EXISTS "Public Write Followups" ON public.followups;
 CREATE POLICY "Public Read Followups" ON public.followups FOR SELECT USING (true);
 CREATE POLICY "Public Write Followups" ON public.followups FOR ALL USING (true);
