@@ -6,10 +6,10 @@ import { supabaseApi } from '../lib/supabase';
 const AppContext = createContext();
 
 const STORAGE_KEYS = {
-  EQUIPMENT: 'sportequip_items_v3_prod',
-  BORROWERS: 'sportequip_borrowers_v3_prod',
-  LOANS: 'sportequip_loans_v3_prod',
-  FOLLOWUPS: 'sportequip_followups_v3_prod',
+  EQUIPMENT: 'sportequip_items_v4_clean',
+  BORROWERS: 'sportequip_borrowers_v4_clean',
+  LOANS: 'sportequip_loans_v5_clean',
+  FOLLOWUPS: 'sportequip_followups_v4_clean',
   GRADE_CONFIG: 'sportequip_grades_v4_saluang',
   TEACHER_PIN: 'sportequip_teacher_pin_v2_2569'
 };
@@ -144,47 +144,36 @@ export function AppProvider({ children }) {
     async function syncFromCloud() {
       try {
         const { data: cloudLoans } = await supabaseApi.get('loans', 'order=borrow_date.desc&limit=100');
-        if (isMounted && cloudLoans && Array.isArray(cloudLoans) && cloudLoans.length > 0) {
-          setLoans(prev => {
-            const merged = [...prev];
-            cloudLoans.forEach(cLoan => {
-              const existingIdx = merged.findIndex(l => l.id === cLoan.id);
-              const formattedLoan = {
-                id: cLoan.id,
-                studentId: cLoan.borrower_id || '',
-                borrowerStudentId: cLoan.borrower_id || '',
-                borrowerName: cLoan.borrower_name || 'นักเรียน',
-                studentName: (cLoan.borrower_name || '').split(' (')[0],
-                grade: cLoan.grade || 'ม.1',
-                room: cLoan.room || '1',
-                borrowerDepartment: cLoan.grade && cLoan.room ? `ชั้น ${cLoan.grade}/${cLoan.room}` : 'นักเรียน',
-                borrowerDept: cLoan.grade && cLoan.room ? `ชั้น ${cLoan.grade}/${cLoan.room}` : 'นักเรียน',
-                phone: cLoan.phone || '',
-                lineId: cLoan.line_id || '',
-                borrowerPhone: cLoan.phone || '',
-                borrowerLineId: cLoan.line_id || '',
-                borrowDate: cLoan.borrow_date || cLoan.created_at,
-                dueDate: cLoan.return_due || new Date().toISOString(),
-                returnDate: cLoan.return_date,
-                status: cLoan.status || 'active',
-                items: [
-                  {
-                    equipmentId: cLoan.item_id || 'SP-01',
-                    code: cLoan.item_barcode || '',
-                    name: cLoan.item_name || 'อุปกรณ์กีฬา',
-                    image: cLoan.item_image || '⚽',
-                    qty: 1
-                  }
-                ]
-              };
-              if (existingIdx >= 0) {
-                merged[existingIdx] = { ...merged[existingIdx], ...formattedLoan };
-              } else {
-                merged.unshift(formattedLoan);
+        if (isMounted && cloudLoans && Array.isArray(cloudLoans)) {
+          const formattedList = cloudLoans.map(cLoan => ({
+            id: cLoan.id,
+            studentId: cLoan.borrower_id || '',
+            borrowerStudentId: cLoan.borrower_id || '',
+            borrowerName: cLoan.borrower_name || 'นักเรียน',
+            studentName: (cLoan.borrower_name || '').split(' (')[0],
+            grade: cLoan.grade || 'ม.1',
+            room: cLoan.room || '1',
+            borrowerDepartment: cLoan.grade && cLoan.room ? `ชั้น ${cLoan.grade}/${cLoan.room}` : 'นักเรียน',
+            borrowerDept: cLoan.grade && cLoan.room ? `ชั้น ${cLoan.grade}/${cLoan.room}` : 'นักเรียน',
+            phone: cLoan.phone || '',
+            lineId: cLoan.line_id || '',
+            borrowerPhone: cLoan.phone || '',
+            borrowerLineId: cLoan.line_id || '',
+            borrowDate: cLoan.borrow_date || cLoan.created_at,
+            dueDate: cLoan.return_due || new Date().toISOString(),
+            returnDate: cLoan.return_date,
+            status: cLoan.status || 'active',
+            items: [
+              {
+                equipmentId: cLoan.item_id || 'SP-01',
+                code: cLoan.item_barcode || '',
+                name: cLoan.item_name || 'อุปกรณ์กีฬา',
+                image: cLoan.item_image || '⚽',
+                qty: 1
               }
-            });
-            return merged;
-          });
+            ]
+          }));
+          setLoans(formattedList);
         }
       } catch (err) {
         console.warn('Supabase auto-sync notification:', err);
